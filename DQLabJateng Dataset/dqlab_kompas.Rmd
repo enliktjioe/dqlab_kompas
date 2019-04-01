@@ -1,0 +1,155 @@
+---
+title: "Pemetaan dan Analisis Data Kemiskinan di Jawa Tengah"
+author: "Enlik Tjioe"
+date: "4/1/2019"
+output:
+  html_document:
+    css: style.css
+    highlight: tango
+    number_sections: yes
+    theme: flatly
+    toc: yes
+    toc_depth: 2
+    toc_float:
+      collapsed: no
+  pdf_document:
+    toc: yes
+    toc_depth: '2'
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Library
+```{r}
+# For Easy Install and Load Library in RStudio
+library(pacman)
+
+# For Data Visualization
+p_load(ggplot2)
+p_load(plotly)
+
+# For Data Manipulation
+p_load(dplyr)
+p_load(openxlsx)
+
+# For Map Visualization
+p_load(leaflet)
+p_load(highcharter)
+```
+
+
+# Data Pre-Processing
+```{r}
+jateng <- read.xlsx("data_kemiskinan_jateng.xlsx")
+glimpse(jateng)
+```
+
+```{r}
+jateng$kabupaten <- gsub("Kabupaten","", jateng$kabupaten)
+jateng$kabupaten <- gsub(" ","", jateng$kabupaten)
+unique(jateng$kabupaten)
+```
+
+
+Fungsi Pengurutan Berdasarkan Tahun Pendataan
+```{r}
+orderByYear <- function(year){
+  x <- jateng %>% 
+    filter(tahun == year) %>% 
+    arrange(desc(jumlah))
+  
+  x$kabupaten <- factor(x$kabupaten, levels = x$kabupaten)
+  
+  return(x)
+}
+```
+
+Tahun 2012
+```{r}
+jateng.ordered <- orderByYear("2014")
+  
+ggplot(data = head(jateng.ordered, 10), aes(x = kabupaten, y = jumlah)) +
+  geom_bar(stat = "identity", aes(fill = kabupaten), show.legend = F) +
+  geom_text(aes(label=paste0(jumlah)),
+            vjust = -0.5,
+            colour = "black", 
+            size = 4) +
+  labs(title = "10 Kabupaten di Jawa Tengah dengan Tingkat Kemiskinan Tertinggi \n(Tahun 2014)",
+       x = "Nama Kabupaten", 
+       y = "Jumlah (Dalam Ribu)") +
+  theme(plot.title = element_text(hjust=0.5)) +
+  scale_y_continuous(limits = c(0,450)) 
+```
+
+```{r}
+jateng.ordered <- orderByYear("2015")
+  
+ggplot(data = head(jateng.ordered, 10), aes(x = kabupaten, y = jumlah)) +
+  geom_bar(stat = "identity", aes(fill = kabupaten), show.legend = F) + 
+  geom_text(aes(label=paste0(jumlah)),
+            vjust = -0.5,
+            colour = "black", 
+            size = 4) +
+  labs(title = "10 Kabupaten di Jawa Tengah dengan Tingkat Kemiskinan Tertinggi \n(Tahun 2015)",
+       x = "Nama Kabupaten", 
+       y = "Jumlah (Dalam Ribu)") +
+  theme(plot.title = element_text(hjust=0.5)) +
+  scale_y_continuous(limits = c(0,450)) 
+```
+
+```{r}
+jateng.ordered <- orderByYear("2016")
+  
+ggplot(data = head(jateng.ordered, 10), aes(x = kabupaten, y = jumlah)) +
+  geom_bar(stat = "identity", aes(fill = kabupaten), show.legend = F) +
+  geom_text(aes(label=paste0(jumlah)),
+            vjust = -0.5,
+            colour = "black", 
+            size = 4) +
+  labs(title = "10 Kabupaten di Jawa Tengah dengan Tingkat Kemiskinan Tertinggi \n(Tahun 2016)",
+       x = "Nama Kabupaten", 
+       y = "Jumlah (Dalam Ribu)") +
+  theme(plot.title = element_text(hjust=0.5)) +
+  scale_y_continuous(limits = c(0,450)) 
+```
+
+
+
+
+```{r}
+lokasi_gis <- unique(jateng[,c(1,4,5)])
+lokasi_gis
+```
+
+
+# Visualisasi dengan Leaflet
+```{r}
+map <- leaflet() %>%
+    addTiles() %>%
+    addMarkers(data = lokasi_gis, lng = ~longitude, lat = ~latitude,
+               layerId = ~kabupaten, label=~kabupaten)
+map
+```
+
+
+```{r}
+jateng.ordered.2016 <- orderByYear("2016") %>% 
+  mutate(group = cut(jumlah, breaks = c(100, 200, 300, Inf), labels = c("blue", "green", "red")))
+
+head(jateng.ordered.2016)
+
+iconColors <- iconList(blue = makeIcon("assets/icon-blue-50.png", iconWidth = 32, iconHeight = 32),
+                       green = makeIcon("assets/icon-green-50.png", iconWidth = 32, iconHeight = 32),
+                       red = makeIcon("assets/icon-red-50.png", iconWidth = 32, iconHeight = 32))
+
+         
+map <- leaflet() %>%
+    addTiles() %>%
+    addMarkers(lng = ~longitude, lat = ~latitude,
+               layerId = ~kabupaten, label=~kabupaten, icon = iconColors[group])
+map
+```
+
+
